@@ -8,6 +8,7 @@ import React, {
 } from 'react';
 import {
   FlatList,
+  Platform,
   RefreshControl,
   ScrollView,
   Text,
@@ -23,11 +24,11 @@ import {
 } from '@/theme/Variables';
 import { useTheme } from '@/hooks';
 import { Modalize } from 'react-native-modalize';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import moment from 'moment';
 import { reduxStorage } from '@/store';
 import { useIsFocused } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
+import DatePicker from 'react-native-date-picker';
 
 const BookListScreen = ({ navigation }: { navigation: any }) => {
   const { t } = useTranslation(['example', 'welcome']);
@@ -37,17 +38,7 @@ const BookListScreen = ({ navigation }: { navigation: any }) => {
     BookSubject[0],
   );
   const [selectedBook, setSelectedBook] = useState<any>([]);
-  const substract = moment().subtract(1, 'years').toArray();
-  const initDate = moment().subtract(0, 'years').toArray();
-  const maxDate = new Date(substract[0], substract[1], substract[2]);
-  const [date, setDate] = useState<any>(
-    new Date(initDate[0], initDate[1], initDate[2]),
-  );
-  const [time, setTime] = useState<any>(
-    new Date(initDate[0], initDate[1], initDate[2]),
-  );
-  const [selectedDate, setSelectedDate] = useState('');
-  const [selectedTime, setSelectedTime] = useState('');
+  const [dateAndTime, setDateAndTime] = useState(new Date());
   const limit = 10;
 
   const [fetchOne, { data: dataListBook, isLoading, isFetching }] =
@@ -66,6 +57,7 @@ const BookListScreen = ({ navigation }: { navigation: any }) => {
   const listRef = useRef<FlatList>(null);
   const modalRef = useRef<Modalize>(null);
   const modalDateRef = useRef<Modalize>(null);
+  const modalDateRefAndroid = useRef<Modalize>(null);
 
   useEffect(() => {
     fetchOne({
@@ -92,18 +84,6 @@ const BookListScreen = ({ navigation }: { navigation: any }) => {
       animated: true,
       offset: 0,
     });
-  };
-
-  const handleChangeDate = (event: any, selectedDateParams: any) => {
-    const currentDate = selectedDateParams || date;
-    setDate(currentDate);
-    setSelectedDate(currentDate);
-  };
-
-  const handleChangeTime = (event: any, selectedTimeParams: any) => {
-    const currentTime = selectedTimeParams || time;
-    setTime(currentTime);
-    setSelectedTime(currentTime);
   };
 
   const renderedContentItem = useCallback(
@@ -483,13 +463,7 @@ const BookListScreen = ({ navigation }: { navigation: any }) => {
                 Fonts.textBold,
               ]}
             >
-              {selectedDate
-                ? moment(selectedDate).format('DD/MM/YYYY')
-                : moment(new Date()).format('DD/MM/YYYY')}
-              {' : '}
-              {selectedTime
-                ? moment(selectedTime).format('hh:mm A')
-                : moment(new Date()).format('hh:mm A')}
+              {moment(dateAndTime).format('DD/MM/YYYY : hh:mm A')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -497,12 +471,8 @@ const BookListScreen = ({ navigation }: { navigation: any }) => {
           onPress={async () => {
             const valueStorage: any = {
               bookData: selectedBook,
-              date:
-                selectedDate === ''
-                  ? moment().format('DD/MM/YYYY')
-                  : selectedDate,
-              time:
-                selectedTime === '' ? moment().format('hh:mm A') : selectedTime,
+              date: moment(dateAndTime).format('DD/MM/YYYY'),
+              time: moment(dateAndTime).format('hh:mm A'),
             };
             const currentStorage = await reduxStorage.getItem(
               StorageKey.BOOK_ORDERED,
@@ -558,25 +528,54 @@ const BookListScreen = ({ navigation }: { navigation: any }) => {
           flexGrow: 0.05,
         }}
       >
-        <DateTimePicker
-          onChange={handleChangeDate}
-          display="spinner"
-          value={date}
-          minimumDate={new Date(moment.now())}
-          maximumDate={maxDate}
+        <DatePicker
+          style={{
+            marginVertical: 60,
+            marginLeft: Platform.OS === 'ios' ? 30 : 0,
+          }}
           textColor="white"
-        />
-        <DateTimePicker
-          testID="dateTimePicker"
-          value={time}
-          mode={'time'}
-          is24Hour={true}
-          display="default"
-          onChange={handleChangeTime}
+          open
+          androidVariant="nativeAndroid"
+          minimumDate={new Date()}
+          date={dateAndTime}
+          onDateChange={setDateAndTime}
+          onCancel={() => {
+            modalDateRef.current?.close();
+          }}
         />
         <TouchableOpacity
           onPress={() => {
             modalDateRef?.current?.close();
+          }}
+        >
+          <Text
+            style={[
+              {
+                color: 'white',
+                fontSize: 20,
+              },
+              Fonts.textCenter,
+            ]}
+          >
+            Done
+          </Text>
+        </TouchableOpacity>
+      </Modalize>
+      <Modalize
+        handlePosition="inside"
+        ref={modalDateRefAndroid}
+        adjustToContentHeight
+        modalStyle={{
+          backgroundColor: '#1c3c5e',
+          paddingLeft: 25,
+          paddingRight: 25,
+          paddingBottom: 25,
+          flexGrow: 0.05,
+        }}
+      >
+        <TouchableOpacity
+          onPress={() => {
+            modalDateRefAndroid?.current?.close();
           }}
         >
           <Text
